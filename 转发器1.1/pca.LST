@@ -1,0 +1,401 @@
+C51 COMPILER V9.01   PCA                                                                   12/16/2015 22:57:32 PAGE 1   
+
+
+C51 COMPILER V9.01, COMPILATION OF MODULE PCA
+OBJECT MODULE PLACED IN pca.OBJ
+COMPILER INVOKED BY: d:\Keil\C51\BIN\C51.EXE pca.c LARGE OPTIMIZE(9,SPEED) BROWSE DEBUG OBJECTEXTEND
+
+line level    source
+
+   1          #include "STC15.h"
+   2          #include "timer.h"
+   3          #include "ev1527.h"
+   4          #include "pca.h"
+   5          
+   6          unsigned char flag;
+   7          unsigned int count,endcount;
+   8          bit OP;
+   9          
+  10          #define FOSC    12000000L
+  11          #define T100Hz  (FOSC / 12 / 1923)
+  12          
+  13          #define T20Hz  (FOSC / 12 / 20)
+  14          
+  15          #define CCP_S0 0x10                 //P_SW1.4
+  16          #define CCP_S1 0x20                 //P_SW1.5
+  17          
+  18          
+  19          WORD value;
+  20          WORD value_send_delay;
+  21          
+  22          unsigned char second_filter_time = 0;
+  23          unsigned char second_filter_table = 0;
+  24          
+  25             
+  26          //CPA 终端服务程序
+  27          void PCA_isr() interrupt 7 using 1
+  28          {       
+  29   1                      switch (flag_Pattern)
+  30   1                      {
+  31   2                      case 0:
+  32   2                              CCF0 = 0;                       //清中断标志
+  33   2                              CCAP0L = value_send_delay;
+  34   2                              CCAP0H = value_send_delay >> 8;            //更新比较值
+  35   2                              value_send_delay += T20Hz;
+  36   2      
+  37   2                              if (return_again_and_again_decoder_table() == 1)
+  38   2                              {
+  39   3                                      again_and_again_time++;
+  40   3                                      if (again_and_again_time >repeat_time)
+  41   3                                      {
+  42   4                                              clear_again_and_again_decoder_table();
+  43   4                                              again_and_again_time = 0;
+  44   4                                      }
+  45   3                              }
+  46   2                              if (second_filter_table == 1)
+  47   2                              {
+  48   3                                      second_filter_time++;
+  49   3                                      if (second_filter_time >repeat_time)
+  50   3                                      {
+  51   4                                              second_filter_table = 0;
+  52   4                                              second_filter_time = 0;
+  53   4                                      }
+  54   3                              }
+  55   2                              break;
+C51 COMPILER V9.01   PCA                                                                   12/16/2015 22:57:32 PAGE 2   
+
+  56   2                      case 1:
+  57   2                              CCF0 = 0;                       //清中断标志
+  58   2                              CCAP0L = value;
+  59   2                              CCAP0H = value >> 8;            //更新比较值 520us
+  60   2                              value += T100Hz;
+  61   2                              count++;
+  62   2                              if (flag == 1)
+  63   2      
+  64   2                              {
+  65   3      
+  66   3                                      OP = 1;
+  67   3      
+  68   3                              }
+  69   2      
+  70   2                              else
+  71   2      
+  72   2                              {
+  73   3      
+  74   3                                      OP = 0;
+  75   3      
+  76   3                              }
+  77   2      
+  78   2                              P35 = OP;
+  79   2                              break;
+  80   2                      case 2:
+  81   2                              CCF0 = 0;                       //清中断标志
+  82   2                              CCAP0L = value_send_delay;                                 //更新比较值 50ms
+  83   2                              CCAP0H = value_send_delay >> 8;            //更新比较值 50ms
+  84   2                              value_send_delay += T20Hz;
+  85   2      
+  86   2                              delay_time++;
+  87   2      
+  88   2                              if (delay_time == send_time)
+  89   2                              {
+  90   3                                      P35 = 0;
+  91   3                                      delay_time = 0;
+  92   3      
+  93   3                                      received_end = 1;
+  94   3                                      CCF0 = 0;                       //清中断标志
+  95   3                                      CCAP0L = value;
+  96   3                                      CCAP0H = value >> 8;            //更新比较值 520us
+  97   3                                      value += T100Hz;
+  98   3      
+  99   3                              }
+ 100   2                              else if (return_again_and_again_decoder_table() == 1)
+ 101   2                              {
+ 102   3                                      again_and_again_time++;
+ 103   3                                      if (again_and_again_time > repeat_time)
+ 104   3                                      {
+ 105   4                                              clear_again_and_again_decoder_table();
+ 106   4                                              again_and_again_time = 0;
+ 107   4                                      }
+ 108   3                              }
+ 109   2                              else if (second_filter_table == 1)
+ 110   2                              {
+ 111   3                                      second_filter_time++;
+ 112   3                                      if (second_filter_time >repeat_time)
+ 113   3                                      {
+ 114   4                                              second_filter_table = 0;
+ 115   4                                              second_filter_time = 0;
+ 116   4                                      }
+ 117   3                              }
+C51 COMPILER V9.01   PCA                                                                   12/16/2015 22:57:32 PAGE 3   
+
+ 118   2      
+ 119   2      
+ 120   2                              break;
+ 121   2                      case 3:
+ 122   2                              CCF0 = 0;                       //清中断标志
+ 123   2                              CCAP0L = value_send_delay;
+ 124   2                              CCAP0H = value_send_delay >> 8;            //更新比较值
+ 125   2                              value_send_delay += T20Hz;
+ 126   2      
+ 127   2                              if (return_again_and_again_decoder_table() == 1)
+ 128   2                              {
+ 129   3                                      again_and_again_time++;
+ 130   3                                      if (again_and_again_time >repeat_time)
+ 131   3                                      {
+ 132   4                                              clear_again_and_again_decoder_table();
+ 133   4                                              again_and_again_time = 0;
+ 134   4                                      }
+ 135   3                              }
+ 136   2                              if (second_filter_table == 1)
+ 137   2                              {
+ 138   3                                      second_filter_time++;
+ 139   3                                      if (second_filter_time >120)
+ 140   3                                      {
+ 141   4                                              second_filter_table = 0;
+ 142   4                                              second_filter_time = 0;
+ 143   4                                      }
+ 144   3                              }
+ 145   2                              break;
+ 146   2      
+ 147   2                      default:
+ 148   2                              break;
+ 149   2                      }
+ 150   1                      
+ 151   1              /*
+ 152   1              if(CCF1==1)
+ 153   1              {
+ 154   1                      
+ 155   1                      if(flag_Pattern==3)
+ 156   1                      {
+ 157   1                         CCF1 = 0;
+ 158   1                              CCAP1L = value_waite;
+ 159   1                              CCAP1H = value_waite >> 8;            
+ 160   1                              value += T20Hz;
+ 161   1                              waite_time++;
+ 162   1      
+ 163   1                              if (waite_time == waite_time_s)
+ 164   1                              {
+ 165   1                                      waite_time = 0;
+ 166   1                                      waite_end = 1;
+ 167   1                                      P54 = 1;
+ 168   1                      
+ 169   1                              }
+ 170   1                      }
+ 171   1                      else 
+ 172   1                      {
+ 173   1                              CCF1 = 0;
+ 174   1                              CCAP1L = value_waite;
+ 175   1                              CCAP1H = value_waite >> 8;            
+ 176   1                              value += T20Hz;
+ 177   1      
+ 178   1                                      
+ 179   1                      }
+C51 COMPILER V9.01   PCA                                                                   12/16/2015 22:57:32 PAGE 4   
+
+ 180   1              } */
+ 181   1      }
+ 182          //CPA 初始化
+ 183          void pca_timer_init()
+ 184          {
+ 185   1              count = 0;
+ 186   1      
+ 187   1              flag = 0;
+ 188   1      
+ 189   1              OP = 0;
+ 190   1      
+ 191   1              P35 = 0;
+ 192   1      
+ 193   1              EA = 1;
+ 194   1      
+ 195   1              ACC = P_SW1;
+ 196   1          ACC &= ~(CCP_S0 | CCP_S1);      //CCP_S0=0 CCP_S1=0
+ 197   1          P_SW1 = ACC;                    //(P1.2/ECI, P1.1/CCP0, P1.0/CCP1, P3.7/CCP2)
+ 198   1          
+ 199   1          CCON = 0;                       //初始化PCA控制寄存器
+ 200   1                                          //PCA定时器停止
+ 201   1                                          //清除CF标志
+ 202   1                                          //清除模块中断标志
+ 203   1          CL = 0;                         //复位PCA寄存器
+ 204   1          CH = 0;
+ 205   1          CMOD = 0x00;                    //设置PCA时钟源
+ 206   1                                          //禁止PCA定时器溢出中断
+ 207   1              value_send_delay = T20Hz;
+ 208   1      
+ 209   1              value = T100Hz;
+ 210   1          CCAP0L = value;
+ 211   1          CCAP0H = value >> 8;            //初始化PCA模块0
+ 212   1          value += T100Hz;
+ 213   1          CCAPM0 = 0x49;                  //PCA模块0为16位定时器模式
+ 214   1      
+ 215   1              CR = 1;
+ 216   1      }
+ 217          
+ 218          void SendIRdata(unsigned char id_data_3,unsigned char id_data_2,unsigned char id_data_1)
+ 219          
+ 220          {
+ 221   1      
+ 222   1        int i;
+ 223   1      
+ 224   1        char id_data;
+ 225   1      
+ 226   1        //发送同步头
+ 227   1      
+ 228   1        endcount=1;
+ 229   1      
+ 230   1        flag=1;
+ 231   1        count=0;
+ 232   1      
+ 233   1        do{}while(count<endcount);
+ 234   1      
+ 235   1      
+ 236   1        endcount=31;
+ 237   1      
+ 238   1        flag=0;
+ 239   1      
+ 240   1        count=0;
+ 241   1      
+C51 COMPILER V9.01   PCA                                                                   12/16/2015 22:57:32 PAGE 5   
+
+ 242   1        do{}while(count<endcount);
+ 243   1      
+ 244   1        //发送bit23-bit16
+ 245   1      
+ 246   1        id_data=id_data_3;
+ 247   1      
+ 248   1        for(i=0;i<8;i++)
+ 249   1      
+ 250   1        {
+ 251   2                if(id_data&0x80)  //判断二进制数高位为1还是0
+ 252   2      
+ 253   2           {
+ 254   3                      endcount=3;  //1为宽的高电平
+ 255   3                      flag=1;
+ 256   3           }
+ 257   2      
+ 258   2          else
+ 259   2      
+ 260   2           {
+ 261   3      
+ 262   3           endcount=1;   //0为窄的高电平
+ 263   3                      flag=1;
+ 264   3           }
+ 265   2      
+ 266   2          
+ 267   2      
+ 268   2          count=0;
+ 269   2      
+ 270   2          do{}while(count<endcount);
+ 271   2              
+ 272   2        endcount=4-endcount;
+ 273   2      
+ 274   2        flag=0;
+ 275   2      
+ 276   2        count=0;
+ 277   2      
+ 278   2        do{}while(count<endcount);
+ 279   2      
+ 280   2          id_data=id_data<<1;
+ 281   2      
+ 282   2        }
+ 283   1      
+ 284   1          //发送bit15-bit8
+ 285   1      
+ 286   1        id_data=id_data_2;
+ 287   1      
+ 288   1        for(i=0;i<8;i++)
+ 289   1      
+ 290   1        {
+ 291   2           if(id_data&0x80)
+ 292   2      
+ 293   2           {
+ 294   3      
+ 295   3              endcount=3;
+ 296   3                      flag=1;
+ 297   3           }
+ 298   2      
+ 299   2           else
+ 300   2      
+ 301   2           {
+ 302   3      
+ 303   3             endcount=1;
+C51 COMPILER V9.01   PCA                                                                   12/16/2015 22:57:32 PAGE 6   
+
+ 304   3                 flag=1;
+ 305   3           }
+ 306   2      
+ 307   2           flag=1;
+ 308   2      
+ 309   2           count=0;
+ 310   2      
+ 311   2           do{}while(count<endcount);
+ 312   2      
+ 313   2                endcount=4-endcount;
+ 314   2      
+ 315   2        flag=0;
+ 316   2      
+ 317   2        count=0;
+ 318   2      
+ 319   2        do{}while(count<endcount);
+ 320   2      
+ 321   2           id_data=id_data<<1;
+ 322   2      
+ 323   2        }
+ 324   1      
+ 325   1        //发送bit8-bit0
+ 326   1      
+ 327   1        id_data=id_data_1;
+ 328   1      
+ 329   1        for(i=0;i<8;i++)
+ 330   1      
+ 331   1        {
+ 332   2           if(id_data&0x80)
+ 333   2      
+ 334   2           {
+ 335   3      
+ 336   3               endcount=3;
+ 337   3                       flag=1;
+ 338   3           }
+ 339   2      
+ 340   2           else
+ 341   2      
+ 342   2           {
+ 343   3      
+ 344   3             endcount=1;
+ 345   3                flag=1;
+ 346   3           }
+ 347   2      
+ 348   2           flag=1;
+ 349   2      
+ 350   2           count=0;
+ 351   2      
+ 352   2           do{}while(count<endcount);
+ 353   2      
+ 354   2                endcount=4-endcount;
+ 355   2      
+ 356   2        flag=0;
+ 357   2      
+ 358   2        count=0;
+ 359   2      
+ 360   2        do{}while(count<endcount);
+ 361   2               
+ 362   2           id_data=id_data<<1;
+ 363   2      
+ 364   2        }
+ 365   1      }
+C51 COMPILER V9.01   PCA                                                                   12/16/2015 22:57:32 PAGE 7   
+
+ 366          
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    685    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =     11       2
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =      1    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

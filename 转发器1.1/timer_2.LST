@@ -1,0 +1,349 @@
+C51 COMPILER V9.01   TIMER_2                                                               12/16/2015 22:54:55 PAGE 1   
+
+
+C51 COMPILER V9.01, COMPILATION OF MODULE TIMER_2
+OBJECT MODULE PLACED IN timer_2.OBJ
+COMPILER INVOKED BY: d:\Keil\C51\BIN\C51.EXE timer_2.c LARGE OPTIMIZE(9,SPEED) BROWSE DEBUG OBJECTEXTEND
+
+line level    source
+
+   1          
+   2          #include "stc15.h"
+   3          #include "timer_2.h"
+   4          #include "timer.h"
+   5          #include "debug.h"
+   6          #include "memu.h"
+   7          #include "key.h"
+   8          #include "FUNCTION.h"
+   9          
+  10          unsigned int waite_time = 0;
+  11          unsigned char shanshuo = 0;                             //¼ÆÊý ºìµÆÉÁË¸´ÎÊý
+  12          #if DEBUG_FANHUI
+  13          unsigned char memu_dispaly_time = 0;    //¼ÆÊý100Îª5s ÊýÂë¹Ü»Ø¸´¡°- -¡±
+  14          #endif
+  15          
+  16          //#define T1MS (65536-FOSC/1000)      //1TÄ£Ê½
+  17          #define T1MS (65536-50000) //12TÄ£Ê½
+  18           /*
+  19          sfr IE2       = 0xaf;               //ÖÐ¶ÏÊ¹ÄÜ¼Ä´æÆ÷2
+  20          sfr AUXR      = 0x8e;               //¸¨Öú¼Ä´æÆ÷
+  21          sfr T2H       = 0xD6;               //¶¨Ê±Æ÷2¸ß8Î»
+  22          sfr T2L       = 0xD7;               //¶¨Ê±Æ÷2µÍ8Î»
+  23          
+  24          sbit P10 = P1^0;
+  25                     */
+  26          //-----------------------------------------------
+  27          //ÖÐ¶Ï·þÎñ³ÌÐò
+  28          void t2int() interrupt 12           //ÖÐ¶ÏÈë¿Ú
+  29          {
+  30   1      #if DEBUG
+  31   1              if (flag_Pattern == 3)
+  32   1              {
+  33   2                      if (send_continue == 0)
+  34   2                      {
+  35   3                              waite_time++;
+  36   3                              if (waite_time == waite_time_s)
+  37   3                              {
+  38   4                                      waite_time = 0;
+  39   4                                      waite_end = 1;
+  40   4      
+  41   4                              }
+  42   3                      }
+  43   2                      else
+  44   2                      {
+  45   3                              waite_time++;
+  46   3                              if (waite_time == 20)
+  47   3                              {
+  48   4                                      send_continue = 0;
+  49   4                                      waite_time = 0;
+  50   4                                      waite_end = 1;
+  51   4      
+  52   4                              }
+  53   3                      }
+  54   2      #if DEBUG_SHANSHUO
+  55   2                      if (decode_success == 1)
+C51 COMPILER V9.01   TIMER_2                                                               12/16/2015 22:54:55 PAGE 2   
+
+  56   2                      {
+  57   3                              LED_R = !LED_R;
+  58   3                              shanshuo++;
+  59   3                              if (shanshuo == 2)
+  60   3                              {
+  61   4                                      decode_success = 0;
+  62   4                              }
+  63   3                      }
+  64   2      #endif
+  65   2      #if DEBUG_FANHUI
+  66   2                      if (memu_dispaly_time_start == 1)
+  67   2                      {
+  68   3                              memu_dispaly_time++;
+  69   3                              if (memu_dispaly_time == 100)
+  70   3                              {
+  71   4                                      memu_dispaly_time_start = 0;
+  72   4                                      memu_dispaly_time = 0;
+  73   4                                      H = 12;
+  74   4                                      L = 12;
+  75   4                                      memu_count = 0;
+  76   4                              }
+  77   3                              //      return;
+  78   3                      }
+  79   2      #endif
+  80   2              }
+  81   1              else
+  82   1              {
+  83   2                      waite_time = 0;
+  84   2      #if DEBUG_SHANSHUO
+  85   2                      if (decode_success == 1)
+  86   2                      {
+  87   3                              LED_R = !LED_R;
+  88   3                              shanshuo++;
+  89   3                              if (shanshuo == 2)
+  90   3                              {
+  91   4                                      decode_success = 0;
+  92   4                              }
+  93   3                      }
+  94   2      #endif
+  95   2      #if DEBUG_FANHUI
+  96   2                      if (memu_dispaly_time_start == 1)
+  97   2                      {
+  98   3                              memu_dispaly_time++;
+  99   3                              if (memu_dispaly_time == 100)
+ 100   3                              {
+ 101   4                                      memu_dispaly_time_start = 0;
+ 102   4                                      memu_dispaly_time = 0;
+ 103   4                                      H = 12;
+ 104   4                                      L = 12;
+ 105   4                                      memu_count = 0;
+ 106   4                              }
+ 107   3                              //      return;
+ 108   3                      }
+ 109   2      #endif
+ 110   2              }
+ 111   1      #endif
+ 112   1              //  IE2 &= ~0x04;                   //ÈôÐèÒªÊÖ¶¯Çå³ýÖÐ¶Ï±êÖ¾,¿ÉÏÈ¹Ø±ÕÖÐ¶Ï,´ËÊ±ÏµÍ³»á×Ô¶¯Çå³ýÄÚ²¿µÄÖÐ¶Ï±êÖ
+             -¾
+ 113   1              //  IE2 |= 0x04;                    //È»ºóÔÙ¿ªÖÐ¶Ï¼´¿É
+ 114   1      //#if DEBUG_2
+ 115   1      //if(flag_Pattern==3)
+ 116   1      //      {
+C51 COMPILER V9.01   TIMER_2                                                               12/16/2015 22:54:55 PAGE 3   
+
+ 117   1      //              waite_time++;
+ 118   1      //              if(waite_time==waite_time_s)
+ 119   1      //              {
+ 120   1      //                      waite_time = 0;
+ 121   1      //                      waite_end = 1;
+ 122   1      //                           
+ 123   1      //              }       
+ 124   1      //      }
+ 125   1      //    else 
+ 126   1      //        waite_time = 0;
+ 127   1      //#endif
+ 128   1      ////  IE2 &= ~0x04;                   //ÈôÐèÒªÊÖ¶¯Çå³ýÖÐ¶Ï±êÖ¾,¿ÉÏÈ¹Ø±ÕÖÐ¶Ï,´ËÊ±ÏµÍ³»á×Ô¶¯Çå³ýÄÚ²¿µÄÖÐ¶Ï±ê
+             -Ö¾
+ 129   1      ////  IE2 |= 0x04;                    //È»ºóÔÙ¿ªÖÐ¶Ï¼´¿É
+ 130   1      //
+ 131   1      //      
+ 132   1      //              switch (flag_Pattern)
+ 133   1      //              {
+ 134   1      //              case 0:
+ 135   1      //                      waite_time = 0;
+ 136   1      //#if DEBUG
+ 137   1      //                      if (decode_success == 1)
+ 138   1      //                      {
+ 139   1      //                              LED_R = !LED_R;
+ 140   1      //                              shanshuo++;
+ 141   1      //                              if (shanshuo == 6)
+ 142   1      //                              {
+ 143   1      //                                      decode_success = 0;
+ 144   1      //                              }
+ 145   1      //                      //      return;
+ 146   1      //                      }
+ 147   1      //#endif
+ 148   1      //#if DEBUG_1
+ 149   1      //                      if (memu_dispaly_time_start == 1)
+ 150   1      //                      {
+ 151   1      //                              //LED_G = 1;
+ 152   1      //                              memu_dispaly_time++;
+ 153   1      //                              if (memu_dispaly_time == 100)
+ 154   1      //                              {
+ 155   1      //                                      memu_dispaly_time_start = 0;
+ 156   1      //                                      memu_dispaly_time = 0;
+ 157   1      //                                      H = 12;
+ 158   1      //                                      L = 12;
+ 159   1      //                              }
+ 160   1      //                              //      return;
+ 161   1      //                      }
+ 162   1      //#endif
+ 163   1      //                      break;
+ 164   1      //              case 1:
+ 165   1      //                      waite_time = 0;
+ 166   1      //#if DEBUG_1
+ 167   1      //                      if (memu_dispaly_time_start == 1)
+ 168   1      //                      {
+ 169   1      //                              memu_dispaly_time++;
+ 170   1      //                              if (memu_dispaly_time == 100)
+ 171   1      //                              {
+ 172   1      //                                      memu_dispaly_time_start = 0;
+ 173   1      //                                      memu_dispaly_time = 0;
+ 174   1      //                                      H = 12;
+ 175   1      //                                      L = 12;
+ 176   1      //                              }
+ 177   1      //                              //      return;
+C51 COMPILER V9.01   TIMER_2                                                               12/16/2015 22:54:55 PAGE 4   
+
+ 178   1      //                      }
+ 179   1      //#endif
+ 180   1      //                      break;
+ 181   1      //              case 2:
+ 182   1      //                      waite_time = 0;
+ 183   1      //#if DEBUG
+ 184   1      //                      if (decode_success == 1)
+ 185   1      //                      {
+ 186   1      //                              LED_R = !LED_R;
+ 187   1      //                              shanshuo++;
+ 188   1      //                              if (shanshuo == 6)
+ 189   1      //                              {
+ 190   1      //                                      decode_success = 0;
+ 191   1      //                              }
+ 192   1      //              //      /       return;
+ 193   1      //                      }
+ 194   1      //              
+ 195   1      //#endif        
+ 196   1      //#if DEBUG_1
+ 197   1      //                      if (memu_dispaly_time_start == 1)
+ 198   1      //                      {
+ 199   1      //                              memu_dispaly_time++;
+ 200   1      //                              if (memu_dispaly_time == 100)
+ 201   1      //                              {
+ 202   1      //                                      memu_dispaly_time_start = 0;
+ 203   1      //                                      memu_dispaly_time = 0;
+ 204   1      //                                      H = 12;
+ 205   1      //                                      L = 12;
+ 206   1      //                              }
+ 207   1      //                              //      return;
+ 208   1      //                      }
+ 209   1      //#endif
+ 210   1      //                      break;
+ 211   1      //              case 3:
+ 212   1      //                      switch (send_continue)
+ 213   1      //                      {
+ 214   1      //                      case 0:
+ 215   1      //                              waite_time++;
+ 216   1      //                              if (waite_time == waite_time_s)
+ 217   1      //                              {
+ 218   1      //                                      waite_time = 0;
+ 219   1      //                                      waite_end = 1;
+ 220   1      //                              
+ 221   1      //                              }
+ 222   1      //#if DEBUG
+ 223   1      //                              if (decode_success == 1)
+ 224   1      //                              {
+ 225   1      //                                      LED_R = !LED_R;
+ 226   1      //                                      shanshuo++;
+ 227   1      //                                      if (shanshuo == 6)
+ 228   1      //                                      {
+ 229   1      //                                              decode_success = 0;
+ 230   1      //                                      }
+ 231   1      //                              //      return;
+ 232   1      //                              }
+ 233   1      //                              
+ 234   1      //#endif
+ 235   1      //#if DEBUG_1
+ 236   1      //                              if (memu_dispaly_time_start == 1)
+ 237   1      //                              {
+ 238   1      //                                      memu_dispaly_time++;
+ 239   1      //                                      if (memu_dispaly_time == 100)
+C51 COMPILER V9.01   TIMER_2                                                               12/16/2015 22:54:55 PAGE 5   
+
+ 240   1      //                                      {
+ 241   1      //                                              memu_dispaly_time_start = 0;
+ 242   1      //                                              memu_dispaly_time = 0;
+ 243   1      //                                              H = 12;
+ 244   1      //                                              L = 12;
+ 245   1      //                                      }
+ 246   1      //                                      //      return;
+ 247   1      //                              }
+ 248   1      //#endif
+ 249   1      //                              break;
+ 250   1      //                      case 1:
+ 251   1      //                              waite_time++;
+ 252   1      //                              if (waite_time == 20)
+ 253   1      //                              {
+ 254   1      //                                      send_continue = 0;
+ 255   1      //                                      waite_time = 0;
+ 256   1      //                                      waite_end = 1;
+ 257   1      //                              
+ 258   1      //                              }
+ 259   1      //#if DEBUG
+ 260   1      //                              if (decode_success == 1)
+ 261   1      //                              {
+ 262   1      //                                      LED_R = !LED_R;
+ 263   1      //                                      shanshuo++;
+ 264   1      //                                      if (shanshuo == 6)
+ 265   1      //                                      {
+ 266   1      //                                              decode_success = 0;
+ 267   1      //                                      }
+ 268   1      //                              //      return;
+ 269   1      //                              }
+ 270   1      //                              
+ 271   1      //#endif
+ 272   1      //#if DEBUG_1
+ 273   1      //                              if (memu_dispaly_time_start == 1)
+ 274   1      //                              {
+ 275   1      //                                      memu_dispaly_time++;
+ 276   1      //                                      if (memu_dispaly_time == 100)
+ 277   1      //                                      {
+ 278   1      //                                              memu_dispaly_time_start = 0;
+ 279   1      //                                              memu_dispaly_time = 0;
+ 280   1      //                                              H = 12;
+ 281   1      //                                              L = 12;
+ 282   1      //                                      }
+ 283   1      //                                      //      return;
+ 284   1      //                              }
+ 285   1      //#endif
+ 286   1      //                              break;
+ 287   1      //                      default:
+ 288   1      //                              break;
+ 289   1      //                      }
+ 290   1      //                      break;
+ 291   1      //              default:
+ 292   1      //                      break;
+ 293   1      //              }
+ 294   1      
+ 295   1      
+ 296   1      }
+ 297          
+ 298          //-----------------------------------------------
+ 299          
+ 300          /* main program */
+ 301          void Init_Timer2()
+C51 COMPILER V9.01   TIMER_2                                                               12/16/2015 22:54:55 PAGE 6   
+
+ 302          {
+ 303   1      //    AUXR |= 0x04;                   //¶¨Ê±Æ÷2Îª1TÄ£Ê½
+ 304   1        AUXR &= ~0x04;                  //¶¨Ê±Æ÷2Îª12TÄ£Ê½
+ 305   1          T2L = T1MS;                     //³õÊ¼»¯¼ÆÊ±Öµ
+ 306   1          T2H = T1MS >> 8;
+ 307   1          AUXR |= 0x10;                   //¶¨Ê±Æ÷2¿ªÊ¼¼ÆÊ±
+ 308   1          
+ 309   1              IE2 |= 0x04;                     //¿ª¶¨Ê±Æ÷ÖÐ¶Ï
+ 310   1         
+ 311   1      
+ 312   1          
+ 313   1      }
+ 314          
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    260    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =      4    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

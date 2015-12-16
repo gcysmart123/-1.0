@@ -1,0 +1,299 @@
+C51 COMPILER V9.01   KEY                                                                   12/16/2015 22:57:29 PAGE 1   
+
+
+C51 COMPILER V9.01, COMPILATION OF MODULE KEY
+OBJECT MODULE PLACED IN key.OBJ
+COMPILER INVOKED BY: d:\Keil\C51\BIN\C51.EXE key.c LARGE OPTIMIZE(9,SPEED) BROWSE DEBUG OBJECTEXTEND
+
+line level    source
+
+   1          #include "STC15.h"
+   2          #include "delay.h"
+   3          #include "FUNCTION.h"
+   4          #include "debug.h"
+   5          #include "timer_2.h"
+   6          
+   7          #define KEY_EST         P37
+   8          #define KEY_UP          P36
+   9          #define KEY_DOWN        P34
+  10          #define KEY_ESC         P33
+  11          //unsigned char u;
+  12          
+  13          //void display (unsigned char LED_H,unsigned char LED_L);
+  14          unsigned char memu_dispaly_time_start = 0;                      //菜单显示时间计时开始标志
+  15          
+  16          void key()
+  17          { 
+  18   1      
+  19   1              if (!KEY_EST)  //如果检测到低电平，说明按键按下
+  20   1              {
+  21   2                      DelayMs(); //延时去抖，一般10-20ms
+  22   2                      if (!KEY_EST)     //再次确认按键是否按下，没有按下则退出
+  23   2                      {
+  24   3                              while (!KEY_EST);//如果确认按下按键等待按键释放，没有释放则一直等待
+  25   3                              {
+  26   4                                      
+  27   4                                      memu_count++;
+  28   4                                      switch (memu_count)
+  29   4                                      {
+  30   5                                      case 1:
+  31   5                                              H = 11;
+  32   5                                              L = 1;
+  33   5                                              f_num = L;
+  34   5                                              break;
+  35   5                                      case 2:
+  36   5                                              if (f_num == 1)
+  37   5                                              {
+  38   6                                                      H = f_num_3_h;
+  39   6                                                      L = f_num_3_l;
+  40   6                                              }
+  41   5                                              else if (f_num == 2)
+  42   5                                              {
+  43   6                                                      H = f_num_4_h;
+  44   6                                                      L = f_num_4_l;
+  45   6                                              }
+  46   5                                              else
+  47   5                                              {
+  48   6                                                      H = f_num_5_h;
+  49   6                                                      L = f_num_5_l;
+  50   6                                              }
+  51   5      
+  52   5                                              break;
+  53   5                                      case 3:
+  54   5                                              memu_count = 0;
+  55   5                                              H = L = 12;
+C51 COMPILER V9.01   KEY                                                                   12/16/2015 22:57:29 PAGE 2   
+
+  56   5                                              break;
+  57   5                                      default:
+  58   5                                              break;//默认的break
+  59   5                                      }
+  60   4      #if DEBUG_FANHUI
+  61   4                                      memu_dispaly_time_start = 1;
+  62   4                                      memu_dispaly_time = 0;
+  63   4      #endif
+  64   4                              }
+  65   3                      }
+  66   2                      //display(H,L);
+  67   2              }
+  68   1      
+  69   1      
+  70   1              if (!KEY_UP)  //如果检测到低电平，说明按键按下
+  71   1              {
+  72   2                      DelayMs(); //延时去抖，一般10-20ms
+  73   2                      if (!KEY_UP)     //再次确认按键是否按下，没有按下则退出
+  74   2                      {
+  75   3                              while (!KEY_UP);//如果确认按下按键等待按键释放，没有释放则一直等待
+  76   3                              {
+  77   4                                      switch (memu_count)
+  78   4                                      {
+  79   5                                      case 1:
+  80   5                                              f_num++;
+  81   5                                              if (f_num == 4)
+  82   5                                              {
+  83   6                                                      f_num = 1;
+  84   6                                              }
+  85   5                                              L = f_num;
+  86   5                                              break;
+  87   5                                      case 2:
+  88   5                                              switch (f_num)
+  89   5                                              {
+  90   6                                              case 1:
+  91   6                                                      if (L == 9)L = 0;
+  92   6                                                      else L++;
+  93   6      
+  94   6                                                      f_num_3_h = H;
+  95   6                                                      f_num_3_l = L;
+  96   6                                                      break;
+  97   6                                              case 2:
+  98   6                                                      L++;
+  99   6                                                      if (L >= 10)
+ 100   6                                                      {
+ 101   7                                                              L = L % 10;
+ 102   7                                                              H++;
+ 103   7                                                              if (H >= 10)
+ 104   7                                                              {
+ 105   8                                                                      H = 0;
+ 106   8                                                                      L = 0;
+ 107   8                                                              }/*
+ 108   7                                                              L = L % 10;
+ 109   7                                                              H++;*/
+ 110   7                                                      }
+ 111   6      
+ 112   6                                                      f_num_4_h = H;
+ 113   6                                                      f_num_4_l = L;
+ 114   6                                                      break;
+ 115   6                                              case 3:
+ 116   6                                                      L++;
+ 117   6                                                      if (L >= 10)
+C51 COMPILER V9.01   KEY                                                                   12/16/2015 22:57:29 PAGE 3   
+
+ 118   6                                                      {
+ 119   7                                                              L = L % 10;
+ 120   7                                                              H++;
+ 121   7                                                              if (H >= 10)
+ 122   7                                                              {
+ 123   8                                                                      H = 0;
+ 124   8                                                                      L = 0;
+ 125   8                                                              }/*
+ 126   7                                                              L = L % 10;
+ 127   7                                                              H++;*/
+ 128   7                                                      }
+ 129   6      
+ 130   6                                                      f_num_5_h = H;
+ 131   6                                                      f_num_5_l = L;
+ 132   6                                                      break;
+ 133   6                                              }
+ 134   5                                              break;
+ 135   5                                      default:
+ 136   5                                              break;
+ 137   5                                      }
+ 138   4      #if DEBUG_FANHUI
+ 139   4                                      memu_dispaly_time_start = 1;
+ 140   4                                      memu_dispaly_time = 0;
+ 141   4      #endif
+ 142   4                              }
+ 143   3                      }
+ 144   2                      //display(H,L);
+ 145   2              }
+ 146   1      
+ 147   1      
+ 148   1              if (!KEY_DOWN)  //如果检测到低电平，说明按键按下
+ 149   1              {
+ 150   2                      DelayMs(); //延时去抖，一般10-20ms
+ 151   2                      if (!KEY_DOWN)     //再次确认按键是否按下，没有按下则退出
+ 152   2                      {
+ 153   3                              while (!KEY_DOWN);//如果确认按下按键等待按键释放，没有释放则一直等待
+ 154   3                              {
+ 155   4                                      switch (memu_count)
+ 156   4                                      {
+ 157   5                                      case 1:
+ 158   5                                              f_num--;
+ 159   5                                              if (f_num == 0)
+ 160   5                                              {
+ 161   6                                                      f_num = 3;
+ 162   6                                              }
+ 163   5                                              L = f_num;
+ 164   5                                              break;
+ 165   5                                      case 2:
+ 166   5                                              switch (f_num)
+ 167   5                                              {
+ 168   6                                              case 1:
+ 169   6                                                      if (L==0)
+ 170   6                                                              L = 9;
+ 171   6                                                      else L--;
+ 172   6      
+ 173   6                                                      f_num_3_h = H;
+ 174   6                                                      f_num_3_l = L;
+ 175   6                                                      break;
+ 176   6                                              case 2:
+ 177   6                                                      if (L == 0)
+ 178   6                                                      {
+ 179   7                                                              if (H == 0)
+C51 COMPILER V9.01   KEY                                                                   12/16/2015 22:57:29 PAGE 4   
+
+ 180   7                                                              {
+ 181   8                                                                      H = 9;
+ 182   8                                                                      L = 9;
+ 183   8                                                              }
+ 184   7                                                              else
+ 185   7                                                              {
+ 186   8                                                                      H--;
+ 187   8                                                                      L = 9;
+ 188   8                                                              }
+ 189   7                                                      }
+ 190   6                                                      else
+ 191   6                                                              L--;
+ 192   6      
+ 193   6                                                      f_num_4_h = H;
+ 194   6                                                      f_num_4_l = L;
+ 195   6      
+ 196   6                                                      break;
+ 197   6                                              case 3:
+ 198   6                                                      if (L == 0)
+ 199   6                                                      {
+ 200   7                                                              if (H == 0)
+ 201   7                                                              {
+ 202   8                                                                      H = 9;
+ 203   8                                                                      L = 9;
+ 204   8                                                              }
+ 205   7                                                              else
+ 206   7                                                              {
+ 207   8                                                                      H--;
+ 208   8                                                                      L = 9;
+ 209   8                                                              }
+ 210   7                                                      }
+ 211   6                                                      else
+ 212   6                                                              L--;
+ 213   6      
+ 214   6                                                      f_num_5_h = H;
+ 215   6                                                      f_num_5_l = L;
+ 216   6                                                      break;
+ 217   6      
+ 218   6                                              }
+ 219   5                                              break;
+ 220   5      
+ 221   5                                      default:
+ 222   5                                              break;//默认的break
+ 223   5                                      }
+ 224   4      #if DEBUG_FANHUI
+ 225   4                                      memu_dispaly_time_start = 1;
+ 226   4                                      memu_dispaly_time = 0;
+ 227   4      #endif
+ 228   4                              }
+ 229   3                      }
+ 230   2                      //display(H,L);
+ 231   2              }
+ 232   1      
+ 233   1      
+ 234   1              if (!KEY_ESC)  //如果检测到低电平，说明按键按下
+ 235   1              {
+ 236   2                      DelayMs(); //延时去抖，一般10-20ms
+ 237   2                      if (!KEY_ESC)     //再次确认按键是否按下，没有按下则退出
+ 238   2                      {
+ 239   3                              while (!KEY_ESC);//如果确认按下按键等待按键释放，没有释放则一直等待
+ 240   3                              {
+ 241   4                                      if (memu_count == 0)
+C51 COMPILER V9.01   KEY                                                                   12/16/2015 22:57:29 PAGE 5   
+
+ 242   4                                      {
+ 243   5                                              memu_count = 0;
+ 244   5                                      }
+ 245   4                                      else
+ 246   4                                              memu_count--;
+ 247   4                                      switch (memu_count)
+ 248   4                                      {
+ 249   5                                      case 0:
+ 250   5                                              H = 12;
+ 251   5                                              L = 12;
+ 252   5                                              break;
+ 253   5                                      case 1:
+ 254   5                                              H = 11;
+ 255   5                                              L = f_num;
+ 256   5                                              break;
+ 257   5                                      default:
+ 258   5                                              break;//默认的break
+ 259   5                                      }
+ 260   4      #if DEBUG_FANHUI
+ 261   4                                      memu_dispaly_time_start = 1;
+ 262   4                                      memu_dispaly_time = 0;
+ 263   4      #endif
+ 264   4                              }
+ 265   3                      }
+ 266   2              }
+ 267   1              //display(H,L);
+ 268   1      }
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    581    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =      1    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

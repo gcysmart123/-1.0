@@ -1,0 +1,156 @@
+C51 COMPILER V9.01   TIMER                                                                 12/16/2015 22:57:33 PAGE 1   
+
+
+C51 COMPILER V9.01, COMPILATION OF MODULE TIMER
+OBJECT MODULE PLACED IN timer.OBJ
+COMPILER INVOKED BY: d:\Keil\C51\BIN\C51.EXE timer.c LARGE OPTIMIZE(9,SPEED) BROWSE DEBUG OBJECTEXTEND
+
+line level    source
+
+   1          #include "timer.h"
+   2          #include "ev1527.h"
+   3          #include "stc15.h"
+   4          
+   5          unsigned char await_number = 0;      //待机时刻计算50MS次数变量
+   6          unsigned char await_number_table = 0;//0.5秒标志变量
+   7          
+   8          unsigned char main_press_time_table = 0;//main计算时间变量跟标志位
+   9          unsigned char main_press_time = 0;
+  10          
+  11          unsigned char again_and_again_time = 0;// 判断重复解码所需要的计算时间变量
+  12          
+  13          unsigned char logout_cycle_number = 0; //销号 循环 计数变量以及标志位
+  14          unsigned char logout_cycle_table = 0;
+  15          
+  16          unsigned char return_standby_time = 0;//一段时间未操作  返回待机界面
+  17          
+  18          unsigned char second_times = 0;
+  19          
+  20          unsigned char fd_table = 0;
+  21          
+  22          unsigned char filter_main = 0;
+  23          
+  24          unsigned int  send_delay = 0;                   //发送时间累加计数（7500为0.8s）
+  25          
+  26          unsigned char send_start;                               //发送开始标志位
+  27          unsigned char delay_time;                               //停止 延时时间
+  28          unsigned char send_time = 1;                    //发送时间
+  29          unsigned char flag_Pattern= 0;                  /*工作模式 标志
+  30                                                                                                  0：只接收 
+  31                                                                                                  1：发送（0.8s）
+  32                                                                                                  2：接收并计算延时*/
+  33          
+  34          unsigned char times = 2;                                        //预定次数标志
+  35          unsigned char send_times = 0;                   //已经发送次数
+  36          
+  37          //unsigned char send_end;                               //发送停止标志
+  38          unsigned char received_end;                             //解=接收停止标志
+  39          
+  40          unsigned int waite_time_s = 20;                 //缓存时间
+  41          unsigned char waite_end = 0;                    //缓存结束标志
+  42          
+  43          unsigned char repeat_time = 120;
+  44          
+  45          void Init_Timer0(void) 
+  46          {
+  47   1              TMOD |= 0x01;     //使用模式1，16位定时器，使用"|"符号可以在使用多个定时器时不受影响    
+  48   1              TH0 = (65536 - 100) >> 8; //重新赋值 100us
+  49   1              TL0 = (65536 - 100) & 0xff;
+  50   1              EA = 1;            //总中断打开
+  51   1              ET0 = 1;           //定时器中断打开
+  52   1              //TR1=1;           //定时器开关打开
+  53   1      }
+  54          
+  55          void Timer0_isr(void) interrupt 1  //定时器1中断服务程序
+C51 COMPILER V9.01   TIMER                                                                 12/16/2015 22:57:33 PAGE 2   
+
+  56          {
+  57   1              TF0 = 0;
+  58   1              TH0 = (65536 - 100) >> 8;                 //重新赋值 100us
+  59   1              TL0 = (65536 - 100) & 0xff;
+  60   1              if (flag_Pattern == 1)
+  61   1              {
+  62   2                      send_delay++;
+  63   2                      //LED_G = 1;
+  64   2                      if (send_delay == 7500)
+  65   2                      {
+  66   3                              send_delay = 0;
+  67   3                              LED_G = 0;
+  68   3                              send_start = 0;
+  69   3      
+  70   3                      }
+  71   2              }
+  72   1              else
+  73   1              {
+  74   2                      RF_decode_main();
+  75   2              }
+  76   1              //      TF0 = 0;
+  77   1              //      TH0 = (65536 - 100) >> 8;                 //重新赋值 100us
+  78   1              //      TL0 = (65536 - 100) & 0xff;
+  79   1              //      switch (flag_Pattern)
+  80   1              //      {
+  81   1              //      case 0:
+  82   1              //              RF_decode_main();
+  83   1              //              break;
+  84   1              //      case 1:
+  85   1              //              send_delay++;
+  86   1              //              //LED_G = 1;
+  87   1              //              if (send_delay == 7500)
+  88   1              //              {
+  89   1              //                      send_delay = 0;
+  90   1              //                      LED_G = 0;
+  91   1              //                      send_start = 0;
+  92   1              //                      
+  93   1              //              }
+  94   1              //              break;
+  95   1              //      case 2:
+  96   1              //              RF_decode_main();
+  97   1              //              break;
+  98   1              //      case 3:
+  99   1              //              RF_decode_main();
+ 100   1              //              break;
+ 101   1              //      default:
+ 102   1              //              break;
+ 103   1              //      }
+ 104   1      
+ 105   1      
+ 106   1                      /*if(send_start == 1)
+ 107   1                      {       
+ 108   1                              send_delay++;
+ 109   1                              if (send_delay==7500)
+ 110   1                              {
+ 111   1                                      send_start = 0;
+ 112   1                                      send_delay = 0;
+ 113   1                                      LED_G = !LED_G;
+ 114   1                              }
+ 115   1                      }
+ 116   1                      else
+ 117   1                      {
+C51 COMPILER V9.01   TIMER                                                                 12/16/2015 22:57:33 PAGE 3   
+
+ 118   1                              delay_time++;
+ 119   1                              if (delay_time<send_time)
+ 120   1                              {
+ 121   1                                      RF_decode_main();
+ 122   1                              }
+ 123   1                      }       */
+ 124   1      }
+ 125          
+ 126          void clear_return_standby_time(void)
+ 127          {
+ 128   1              return_standby_time = 0;
+ 129   1      }
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    135    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =     24    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

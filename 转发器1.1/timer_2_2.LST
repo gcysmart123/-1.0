@@ -1,0 +1,152 @@
+C51 COMPILER V9.01   TIMER_2_2                                                             12/16/2015 22:57:34 PAGE 1   
+
+
+C51 COMPILER V9.01, COMPILATION OF MODULE TIMER_2_2
+OBJECT MODULE PLACED IN timer_2_2.OBJ
+COMPILER INVOKED BY: d:\Keil\C51\BIN\C51.EXE timer_2_2.c LARGE OPTIMIZE(9,SPEED) BROWSE DEBUG OBJECTEXTEND
+
+line level    source
+
+   1          
+   2          #include "stc15.h"
+   3          #include "timer_2.h"
+   4          #include "timer.h"
+   5          #include "debug.h"
+   6          #include "memu.h"
+   7          #include "key.h"
+   8          #include "FUNCTION.h"
+   9          
+  10          unsigned int waite_time = 0;
+  11          unsigned char shanshuo = 0;                             //¼ÆÊý ºìµÆÉÁË¸´ÎÊý
+  12          #if DEBUG_FANHUI
+  13          unsigned char memu_dispaly_time = 0;    //¼ÆÊý100Îª5s ÊýÂë¹Ü»Ø¸´¡°- -¡±
+  14          #endif
+  15          
+  16          //#define T1MS (65536-FOSC/1000)      //1TÄ£Ê½
+  17          #define T1MS (65536-50000) //12TÄ£Ê½
+  18          
+  19          //ÖÐ¶Ï·þÎñ³ÌÐò
+  20          void t2int() interrupt 12           //ÖÐ¶ÏÈë¿Ú
+  21          {
+  22   1      #if DEBUG
+  23   1              if (flag_Pattern == 3)
+  24   1              {
+  25   2                      if (send_continue==0)
+  26   2                      {
+  27   3                              waite_time++;
+  28   3                              if (waite_time == waite_time_s)
+  29   3                              {
+  30   4                                      waite_time = 0;
+  31   4                                      waite_end = 1;
+  32   4      
+  33   4                              }
+  34   3                      }
+  35   2                      else
+  36   2                      {
+  37   3                              waite_time++;
+  38   3                              if (waite_time == 20)
+  39   3                              {
+  40   4                                      send_continue = 0;
+  41   4                                      waite_time = 0;
+  42   4                                      waite_end = 1;
+  43   4      
+  44   4                              }
+  45   3                      }
+  46   2      #if DEBUG_SHANSHUO
+  47   2                      if (decode_success == 1)
+  48   2                      {
+  49   3                              LED_R = !LED_R;
+  50   3                              shanshuo++;
+  51   3                              if (shanshuo == 2)
+  52   3                              {
+  53   4                                      decode_success = 0;
+  54   4                              }
+  55   3                      }
+C51 COMPILER V9.01   TIMER_2_2                                                             12/16/2015 22:57:34 PAGE 2   
+
+  56   2      #endif
+  57   2      #if DEBUG_FANHUI
+  58   2                      if (memu_dispaly_time_start == 1)
+  59   2                      {
+  60   3                              memu_dispaly_time++;
+  61   3                              if (memu_dispaly_time == 100)
+  62   3                              {
+  63   4                                      memu_dispaly_time_start = 0;
+  64   4                                      memu_dispaly_time = 0;
+  65   4                                      H = 12;
+  66   4                                      L = 12;
+  67   4                                      memu_count = 0;
+  68   4                              }
+  69   3                              //      return;
+  70   3                      }
+  71   2      #endif
+  72   2              }
+  73   1              else
+  74   1              {
+  75   2                      waite_time = 0;
+  76   2      #if DEBUG_SHANSHUO
+  77   2                      if (decode_success == 1)
+  78   2                      {
+  79   3                              LED_R = !LED_R;
+  80   3                              shanshuo++;
+  81   3                              if (shanshuo == 2)
+  82   3                              {
+  83   4                                      decode_success = 0;
+  84   4                              }
+  85   3                      }
+  86   2      #endif
+  87   2      #if DEBUG_FANHUI
+  88   2                      if (memu_dispaly_time_start == 1)
+  89   2                      {
+  90   3                              memu_dispaly_time++;
+  91   3                              if (memu_dispaly_time == 100)
+  92   3                              {
+  93   4                                      memu_dispaly_time_start = 0;
+  94   4                                      memu_dispaly_time = 0;
+  95   4                                      H = 12;
+  96   4                                      L = 12;
+  97   4                                      memu_count = 0;
+  98   4                              }
+  99   3                              //      return;
+ 100   3                      }
+ 101   2      #endif
+ 102   2              }
+ 103   1      #endif
+ 104   1              //  IE2 &= ~0x04;                   //ÈôÐèÒªÊÖ¶¯Çå³ýÖÐ¶Ï±êÖ¾,¿ÉÏÈ¹Ø±ÕÖÐ¶Ï,´ËÊ±ÏµÍ³»á×Ô¶¯Çå³ýÄÚ²¿µÄÖÐ¶Ï±êÖ
+             -¾
+ 105   1              //  IE2 |= 0x04;                    //È»ºóÔÙ¿ªÖÐ¶Ï¼´¿É
+ 106   1      }
+ 107          
+ 108          //-----------------------------------------------
+ 109          
+ 110          /* main program */
+ 111          void Init_Timer2()
+ 112          {
+ 113   1      //    AUXR |= 0x04;                   //¶¨Ê±Æ÷2Îª1TÄ£Ê½
+ 114   1        AUXR &= ~0x04;                  //¶¨Ê±Æ÷2Îª12TÄ£Ê½
+ 115   1          T2L = T1MS;                     //³õÊ¼»¯¼ÆÊ±Öµ
+ 116   1          T2H = T1MS >> 8;
+C51 COMPILER V9.01   TIMER_2_2                                                             12/16/2015 22:57:34 PAGE 3   
+
+ 117   1          AUXR |= 0x10;                   //¶¨Ê±Æ÷2¿ªÊ¼¼ÆÊ±
+ 118   1          
+ 119   1              IE2 |= 0x04;                     //¿ª¶¨Ê±Æ÷ÖÐ¶Ï
+ 120   1         
+ 121   1      
+ 122   1          
+ 123   1      }
+ 124          
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    260    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =      4    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

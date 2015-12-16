@@ -1,0 +1,50 @@
+C51 COMPILER V9.01   FUNCTION                                                              12/16/2015 22:57:29 PAGE 1   
+
+
+C51 COMPILER V9.01, COMPILATION OF MODULE FUNCTION
+OBJECT MODULE PLACED IN Function.OBJ
+COMPILER INVOKED BY: d:\Keil\C51\BIN\C51.EXE Function.c LARGE OPTIMIZE(9,SPEED) BROWSE DEBUG OBJECTEXTEND
+
+line level    source
+
+   1          #include "STC15.h"
+   2          #include "FUNCTION.h"
+   3          #include "timer.h"
+   4          
+   5          void display (unsigned char LED_H,unsigned char LED_L);
+   6          void key();        
+   7          
+   8          unsigned char H = 12, L = 12;
+   9          //unsigned char memu_count, f_num,
+  10          //f_num_3_h, f_num_3_l,
+  11          //f_num_4_h, f_num_4_l,
+  12          //f_num_5_h, f_num_5_l;
+  13          
+  14                                  //      f_num_3, f_num_4, f_num_5;
+  15          unsigned char   memu_count = 0, f_num, 
+  16                                          f_num_3_h = 0, f_num_3_l = 2, 
+  17                                          f_num_4_h = 0, f_num_4_l = 1, 
+  18                                          f_num_5_h = 0, f_num_5_l = 5;
+  19          void function ()
+  20          { 
+  21   1              key();  
+  22   1              display(H,L);
+  23   1              
+  24   1              times = f_num_3_h*10+f_num_3_l;         
+  25   1              waite_time_s =(f_num_4_h*10+f_num_4_l)*20;
+  26   1              repeat_time =(f_num_5_h*10+f_num_5_l)*20;
+  27   1      }                                            
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =     87    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =     10    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

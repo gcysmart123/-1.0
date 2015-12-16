@@ -1,0 +1,62 @@
+C51 COMPILER V9.01   MAIN                                                                  12/16/2015 22:57:30 PAGE 1   
+
+
+C51 COMPILER V9.01, COMPILATION OF MODULE MAIN
+OBJECT MODULE PLACED IN main.OBJ
+COMPILER INVOKED BY: d:\Keil\C51\BIN\C51.EXE main.c LARGE OPTIMIZE(9,SPEED) BROWSE DEBUG OBJECTEXTEND
+
+line level    source
+
+   1          #include "stc15.h"
+   2          #include "ev1527.h"
+   3          #include "timer.h"
+   4          #include "timer_2.h"
+   5          #include "pca.h"
+   6          #include "memu.h"
+   7          #include "FUNCTION.h"
+   8          #include "delay.h"
+   9          
+  10          void main ()
+  11          {
+  12   1              Init_Timer0();
+  13   1      
+  14   1              Init_Timer2();
+  15   1                      
+  16   1              exint0_init();
+  17   1      
+  18   1              pca_timer_init();
+  19   1      
+  20   1              P3M1 = 0X04;                    //设置 P3.2为高阻状态 否则无法解码 P3.5为推挽输出 否则无法发出信号
+  21   1              P3M0 = 0X20;
+  22   1      
+  23   1              P1M1 = 0X00;                    
+  24   1              P1M0 = 0XFF;
+  25   1      
+  26   1              P5M0 = 0X30;
+  27   1              P5M1 = 0X00;
+  28   1      
+  29   1              LED_G = 0;
+  30   1              LED_R = 1;
+  31   1              P35 = 0;
+  32   1      
+  33   1              while(1)
+  34   1              {               
+  35   2                      function();
+  36   2                      memu();
+  37   2              
+  38   2              }
+  39   1      }
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =     43    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

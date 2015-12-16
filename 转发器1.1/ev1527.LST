@@ -1,0 +1,302 @@
+C51 COMPILER V9.01   EV1527                                                                12/16/2015 22:57:28 PAGE 1   
+
+
+C51 COMPILER V9.01, COMPILATION OF MODULE EV1527
+OBJECT MODULE PLACED IN ev1527.OBJ
+COMPILER INVOKED BY: d:\Keil\C51\BIN\C51.EXE ev1527.c LARGE OPTIMIZE(9,SPEED) BROWSE DEBUG OBJECTEXTEND
+
+line level    source
+
+   1          #include "stc15.h"
+   2          #include "ev1527.h"
+   3          #include "timer.h"
+   4          #include "FUNCTION.h"
+   5          #include "out.h"
+   6          #include "memu.h"
+   7          
+   8          /********************解码方式专用变量*******************************/
+   9          unsigned char Save_RF_trans1 = 0;
+  10          unsigned char Save_RF_trans0 = 0;
+  11          unsigned char RF_trans0 = 0;
+  12          unsigned char RF_trans1 = 0;
+  13          unsigned char RF_BIT_COUNTER = 0;
+  14          unsigned char Timer0_interrupt_count = 0; //进入中断后400MS  无结果 恢复初始化操作
+  15          unsigned char P_RF_INT = 0x00;
+  16          unsigned char RF_RECE_REG[3] = { 0 };
+  17          
+  18          unsigned int measure_sync_count1 = 70; //波长保存变量
+  19          unsigned int measure_sync_count2 = 120;//同上
+  20          unsigned int RF_trans1_test_count = 0; //码长测试变量
+  21          unsigned int RF_trans0_test_count = 0; //码长测试变量
+  22          unsigned int RF_trans_count = 0;           //码长测试变量
+  23          unsigned int measure_sync_count1_saved = 70;
+  24          unsigned int measure_sync_count2_saved = 120;
+  25          unsigned int tunning_finish_count = 0;
+  26          
+  27          unsigned char receive_rf_decoder_finished = 0;      //一次解码完成标志位
+  28          unsigned char again_receive_rf_decoder_finished = 0;//二次解码完成标志位
+  29          unsigned char rx_table = 0;                                                     //二次解码switch步骤变量
+  30          unsigned char again_and_again_decoder_table = 0;     //二次编码成功标志位
+  31          
+  32          unsigned char register_manager = 0;
+  33          
+  34          void RF_decode_main(void);
+  35          void clear_again_receive_rf_decoder_finished(void);
+  36          
+  37          unsigned char old1_RF_RECE_REG[3] = { 0 };//用于校验
+  38          unsigned char old2_RF_RECE_REG[3] = { 0 };//用于读取
+  39          
+  40          //unsigned char old2_RF_RECE_REG[3][10] = { 0 };//用于存储
+  41          
+  42          void exint0_init(void) //外部中断0 初始化
+  43          {
+  44   1              EA = 1;
+  45   1              EX0 = 1;
+  46   1              IT0 = 1;
+  47   1      }
+  48          
+  49          void exint0() interrupt 0 //外部中断0中断服务函数
+  50          {
+  51   1              EX0 = 0;
+  52   1                      
+  53   1              if (TR0 == 0)
+  54   1              {
+  55   2                      //Init_Timer1();//sjz add for initialization timer0 before enable it
+C51 COMPILER V9.01   EV1527                                                                12/16/2015 22:57:28 PAGE 2   
+
+  56   2                      TR0 = 1;
+  57   2                      //display(H,L);
+  58   2              }
+  59   1      }
+  60          
+  61          void RF_ini_receive(void) //初始化所有解码所用到的变量
+  62          {
+  63   1              Save_RF_trans1 = 0; Save_RF_trans0 = 0;
+  64   1              RF_trans0 = RF_trans1 = 0;
+  65   1              RF_BIT_COUNTER = 0;
+  66   1              P_RF_INT = 0x00;
+  67   1              Timer0_interrupt_count = 0;//sjz
+  68   1      }
+  69          
+  70          void RF_decode_main(void)
+  71          {
+  72   1              if (P3_RF_RXD == 1)
+  73   1              {
+  74   2                      ++RF_trans1;
+  75   2              }
+  76   1              else
+  77   1              {
+  78   2                      ++RF_trans0;
+  79   2              }
+  80   1              Timer0_interrupt_count++;
+  81   1              if (Timer0_interrupt_count>4000)/*4000*100us=400ms,*/
+  82   1              {
+  83   2                      TR0 = 0;/*shut down timer0 interrupt sjz*/
+  84   2                      EX0 = 1;
+  85   2                      RF_ini_receive();
+  86   2                      return;
+  87   2      
+  88   2              }
+  89   1              switch (P_RF_INT)
+  90   1              {
+  91   2              case 0:  //等待长低电平同步
+  92   2                      if (RF_trans1 > 0)
+  93   2                      {
+  94   3                              //包含的高脉冲太多
+  95   3                              RF_ini_receive();
+  96   3                              EX0 = 1;
+  97   3                              TR0 = 0;
+  98   3                              return;
+  99   3                      }
+ 100   2                      if (RF_trans0 >70)//measure_sync_count1)
+ 101   2                      {
+ 102   3                              //长低同步完成
+ 103   3                              P_RF_INT++;
+ 104   3                              RF_trans0 = RF_trans1 = 0;
+ 105   3                      }
+ 106   2                      break;
+ 107   2              case 1: //等待真正的同步头
+ 108   2                      if ((RF_trans0 + RF_trans1) >140)//measure_sync_count2)/*sjz change from 150 to 120,to shorten the detec
+             -tion when  the header of synchronization coming*/
+ 109   2                      {
+ 110   3                              //10mS没有同步高脉冲
+ 111   3                              RF_ini_receive();
+ 112   3                              EX0 = 1;
+ 113   3                              TR0 = 0;
+ 114   3                              return;
+ 115   3                      }
+ 116   2                      if (RF_trans1 > 1)
+C51 COMPILER V9.01   EV1527                                                                12/16/2015 22:57:28 PAGE 3   
+
+ 117   2                      {
+ 118   3                              //高电平同步到了(最少检测到 2 次)
+ 119   3                              if (EX0 == 1)
+ 120   3                              {
+ 121   4                                      EX0 = 0;/*double check,since we have already detect the synchronization,if EXTINT0 is enable,need to d
+             -isable  sjz*/
+ 122   4                              }
+ 123   3                              P_RF_INT++;
+ 124   3                              RF_trans0 = 0;
+ 125   3      
+ 126   3                              // RF_L_wait_H = 1;
+ 127   3                      }
+ 128   2                      break;
+ 129   2              case 2:
+ 130   2                      if (RF_trans0 > 1)
+ 131   2                      {
+ 132   3                              Save_RF_trans1 = RF_trans1;
+ 133   3                              RF_trans1 = 0;
+ 134   3                              P_RF_INT++;
+ 135   3                      }
+ 136   2                      if (RF_trans1>25)//((measure_sync_count2 + measure_sync_count1) >> 3)) /*if the high level is bigger tha
+             -n 25*100us,Then should be setted as noise instead of useful signal sjz*/
+ 137   2                      {
+ 138   3                              RF_ini_receive();//KEY_HOLD = 0;
+ 139   3                              EX0 = 1;
+ 140   3                              TR0 = 0;
+ 141   3                              return;
+ 142   3                      }
+ 143   2                      break;
+ 144   2              case 3:if (RF_trans1 > 1)
+ 145   2              {
+ 146   3                                 Save_RF_trans0 = RF_trans0;
+ 147   3                                 RF_trans0 = 0;
+ 148   3                                 P_RF_INT = 2;
+ 149   3                                 RF_RECE_REG[RF_BIT_COUNTER / 8] <<= 1;
+ 150   3                                 if (Save_RF_trans1 >Save_RF_trans0)
+ 151   3                                 {
+ 152   4                                         RF_RECE_REG[(RF_BIT_COUNTER) / 8] |= 0x01;
+ 153   4                                 }
+ 154   3                                 ++RF_BIT_COUNTER;
+ 155   3                                 if (RF_BIT_COUNTER >23)
+ 156   3                                 {
+ 157   4                                         //P_RF_INT = 4;
+ 158   4                                         TR0 = 0;
+ 159   4                                         RF_ini_receive();
+ 160   4                                         receive_rf_decoder_finished = 1;
+ 161   4                                         EX0 = 1;
+ 162   4                                         break;
+ 163   4                                 }
+ 164   3              }
+ 165   2                         if (RF_trans0> 25)//((measure_sync_count2 + measure_sync_count1) >> 3))
+ 166   2                         {
+ 167   3                                 RF_ini_receive();
+ 168   3                                 EX0 = 1;
+ 169   3                                 TR0 = 0;
+ 170   3                                 return;
+ 171   3                         }
+ 172   2                         break;
+ 173   2      
+ 174   2              default: //异常处理
+ 175   2              {
+ 176   3                                       RF_ini_receive();
+C51 COMPILER V9.01   EV1527                                                                12/16/2015 22:57:28 PAGE 4   
+
+ 177   3                                       EX0 = 1;
+ 178   3                                       TR0 = 0;
+ 179   3              }break;
+ 180   2              }
+ 181   1      }
+ 182          
+ 183          void receive_rf_decoder(void)
+ 184          {
+ 185   1              if (receive_rf_decoder_finished == 1)
+ 186   1              {
+ 187   2                      receive_rf_decoder_finished = 0;
+ 188   2                      EX0 = 0;
+ 189   2                      switch (rx_table)
+ 190   2                      {
+ 191   3                      case 0: //第一次取得码
+ 192   3                              //SendString("第一次取得码");
+ 193   3                              old1_RF_RECE_REG[0] = RF_RECE_REG[0];
+ 194   3                              old1_RF_RECE_REG[1] = RF_RECE_REG[1];
+ 195   3                              old1_RF_RECE_REG[2] = RF_RECE_REG[2];
+ 196   3                              rx_table = 1;
+ 197   3                              break;
+ 198   3                      case 1:
+ 199   3                              if (old1_RF_RECE_REG[0] == RF_RECE_REG[0] && old1_RF_RECE_REG[1] == RF_RECE_REG[1] && old1_RF_RECE_REG[
+             -2] == RF_RECE_REG[2])
+ 200   3                              {
+ 201   4                                      if (old2_RF_RECE_REG[0] == RF_RECE_REG[0] && old2_RF_RECE_REG[1] == RF_RECE_REG[1] && old2_RF_RECE_REG
+             -[2] == RF_RECE_REG[2])
+ 202   4                                      {
+ 203   5                                              if (again_and_again_decoder_table == 0) //如果该位不等于0  代表着上一次解码等于这次
+ 204   5                                              {
+ 205   6                                                      old2_RF_RECE_REG[0] = RF_RECE_REG[0];
+ 206   6                                                      old2_RF_RECE_REG[1] = RF_RECE_REG[1];
+ 207   6                                                      old2_RF_RECE_REG[2] = RF_RECE_REG[2];
+ 208   6                                                      again_receive_rf_decoder_finished = 1;
+ 209   6                                              }
+ 210   5      
+ 211   5                                      }
+ 212   4                                      else
+ 213   4                                      {
+ 214   5                                              old2_RF_RECE_REG[0] = RF_RECE_REG[0];
+ 215   5                                              old2_RF_RECE_REG[1] = RF_RECE_REG[1];
+ 216   5                                              old2_RF_RECE_REG[2] = RF_RECE_REG[2];
+ 217   5                                              again_receive_rf_decoder_finished = 1;
+ 218   5                                      }
+ 219   4                                      again_and_again_decoder_table = 1;
+ 220   4                                      clear_return_standby_time();
+ 221   4      
+ 222   4                                      RF_RECE_REG[0] = 0;
+ 223   4                                      RF_RECE_REG[1] = 0;
+ 224   4                                      RF_RECE_REG[2] = 0;
+ 225   4                                      old1_RF_RECE_REG[0] = 0;
+ 226   4                                      old1_RF_RECE_REG[1] = 0;
+ 227   4                                      old1_RF_RECE_REG[2] = 0;
+ 228   4                                      rx_table = 0;
+ 229   4                              }
+ 230   3                              else
+ 231   3                              {
+ 232   4                                      old1_RF_RECE_REG[0] = RF_RECE_REG[0];
+ 233   4                                      old1_RF_RECE_REG[1] = RF_RECE_REG[1];
+ 234   4                                      old1_RF_RECE_REG[2] = RF_RECE_REG[2];
+ 235   4                              }
+ 236   3                              break;
+C51 COMPILER V9.01   EV1527                                                                12/16/2015 22:57:28 PAGE 5   
+
+ 237   3                      }
+ 238   2                      EX0 = 1;
+ 239   2              }
+ 240   1      }
+ 241          
+ 242          
+ 243          
+ 244          unsigned char return_again_receive_rf_decoder_finished(void)
+ 245          {
+ 246   1              unsigned char temp;
+ 247   1              temp = again_receive_rf_decoder_finished;
+ 248   1              return temp;
+ 249   1      }
+ 250          
+ 251          void clear_again_receive_rf_decoder_finished(void)
+ 252          {
+ 253   1              again_receive_rf_decoder_finished = 0;
+ 254   1      }
+ 255          
+ 256          unsigned char return_again_and_again_decoder_table(void)
+ 257          {
+ 258   1              unsigned char temp;
+ 259   1              temp = again_and_again_decoder_table;
+ 260   1              return temp;
+ 261   1      }
+ 262          
+ 263          void clear_again_and_again_decoder_table(void)
+ 264          {
+ 265   1              again_and_again_decoder_table = 0;
+ 266   1      }
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    569    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =     37    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)
